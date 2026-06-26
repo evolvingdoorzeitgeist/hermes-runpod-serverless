@@ -13,12 +13,19 @@ SIMPLE_FILENAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 def run_cmd(cmd):
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    return {
-        "returncode": result.returncode,
-        "stdout": result.stdout.strip(),
-        "stderr": result.stderr.strip(),
-    }
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        return {
+            "returncode": result.returncode,
+            "stdout": result.stdout.strip(),
+            "stderr": result.stderr.strip(),
+        }
+    except FileNotFoundError as e:
+        return {
+            "returncode": 127,
+            "stdout": "",
+            "stderr": str(e),
+        }
 
 
 def safe_filename(name: str) -> str:
@@ -49,6 +56,7 @@ def health():
     return {
         "status": "ok",
         "worker": "hermes-runpod-serverless",
+        "worker_type": "gpu" if gpu_check["returncode"] == 0 else "cpu_or_no_gpu",
         "gpu": gpu_check["stdout"] if gpu_check["returncode"] == 0 else None,
         "gpu_error": gpu_check["stderr"] if gpu_check["returncode"] != 0 else None,
         "outputs_path": str(OUTPUT_DIR),
